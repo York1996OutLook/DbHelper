@@ -1,0 +1,215 @@
+Imports System.Data.SqlClient
+
+Public Class DBhelper
+    Public Shared userId As String
+    Public Shared rank As String
+    ''' <summary>
+    ''' 数据库连接字符串,字符串和exe在一个目录下
+    ''' </summary>
+    Public Shared sqlconnection As New SqlConnection(FileIO.FileSystem.ReadAllText(Application.StartupPath & "\sqlConnetion.txt"))
+    ''' <summary>
+    ''' 根据sqlcommand返回是否查询到了数据
+    ''' </summary>
+    ''' <param name="sqlcommand">命令对象</param>
+    ''' <returns>返回是否存在</returns>
+    Shared Function IfExitsByCommand(ByVal sqlcommand As SqlCommand) As Boolean
+
+        sqlcommand.Connection = sqlconnection
+        sqlconnection.Open()
+        Dim read As SqlDataReader = sqlcommand.ExecuteReader
+
+        If read.HasRows = True Then
+            sqlconnection.Close()
+            Return True
+
+        Else
+            sqlconnection.Close()
+            Return False
+        End If
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand执行插入操作
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns>返回是否插入成功</returns>
+    Shared Function insertBycomand(ByVal sqlcommand As SqlCommand) As Boolean
+        Try
+            sqlcommand.Connection = sqlconnection
+            sqlconnection.Open()
+            Dim a As Integer = sqlcommand.ExecuteNonQuery
+            If a >= 1 Then
+                sqlconnection.Close()
+                Return True
+            Else
+                sqlconnection.Close()
+                Return False
+            End If
+        Catch ex As Exception
+            MsgBox(ex.Message)
+            sqlconnection.Close()
+            Return False
+        End Try
+
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand返回是否删除成功
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns>返回是否删除成功</returns>
+    Shared Function deleteByCommand(ByVal sqlcommand As SqlCommand) As Boolean
+        Try
+            sqlcommand.Connection = sqlconnection
+            sqlconnection.Open()
+            Dim a As Integer = sqlcommand.ExecuteNonQuery
+            If a >= 1 Then
+                sqlconnection.Close()
+                Return True
+            Else
+                sqlconnection.Close()
+                Return False
+            End If
+        Catch ex As Exception
+            MsgBox(ex.Message)
+            sqlconnection.Close()
+            Return False
+        End Try
+
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand是否更新成功
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns>更新成功与否</returns>
+    Shared Function updateBycomand(ByVal sqlcommand As SqlCommand) As Boolean
+        sqlcommand.Connection = sqlconnection
+        sqlconnection.Open()
+        Dim a As Integer = sqlcommand.ExecuteNonQuery
+        If a >= 1 Then
+            sqlconnection.Close()
+            Return True
+        Else
+            sqlconnection.Close()
+            Return False
+        End If
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand返回一个list对象,即 一个字符串集合,里面有sqlcommand查到的一系列值
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns>返回字符串集合</returns>
+    Shared Function GetListofStringByCommand(ByVal sqlcommand As SqlCommand) As List(Of String)
+
+        Dim li As New List(Of String)
+        sqlcommand.Connection = sqlconnection
+        sqlconnection.Open()
+        Dim read As SqlDataReader
+        read = sqlcommand.ExecuteReader
+        While read.Read = True
+            li.Add(read.GetValue(0))
+        End While
+        sqlconnection.Close()
+        Return li
+    End Function
+    ''' <summary>
+    ''' 根据查询字符串返回字符串集合
+    ''' </summary>
+    ''' <param name="selectstring"></param>
+    ''' <returns>返回字符串集合</returns>
+    Shared Function GetListofStringByString(ByVal selectstring As String) As List(Of String)
+        Dim sqlcommand As New SqlCommand(selectstring)
+        Dim li As New List(Of String)
+        sqlcommand.Connection = sqlconnection
+        sqlconnection.Open()
+        Dim read As SqlDataReader
+        read = sqlcommand.ExecuteReader
+        While read.Read = True
+            li.Add(read.GetValue(0))
+        End While
+        sqlconnection.Close()
+        Return li
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand获取数据库绑定对象
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns>返回数据库绑定对象</returns>
+    Shared Function GetBindingByCommand(sqlcommand As SqlCommand) As BindingSource
+        sqlcommand.Connection = sqlconnection
+        Dim table As New DataTable
+        Dim sqlAdapter As New SqlDataAdapter(sqlcommand)
+        sqlAdapter.Fill(table)
+        Dim bind As New BindingSource(table, "")
+        Return bind
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand返回一个数据表
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns></returns>
+    Shared Function GetTableBycommand(sqlcommand As SqlCommand) As DataTable
+        sqlcommand.Connection = sqlconnection
+        Dim table As New DataTable
+        Dim sqlAdapter As New SqlDataAdapter(sqlcommand)
+        sqlAdapter.Fill(table)
+        Return table
+    End Function
+    ''' <summary>
+    ''' 根据sqlcommand执行存储过程,
+    ''' </summary>
+    ''' <param name="sqlcommand"></param>
+    ''' <returns>存储过程执行以后影响行数大于0则返回1,否则返回0</returns>
+    Shared Function ExecuteProcByCommand(sqlcommand As SqlCommand) As Integer
+        Try
+            DBhelper.sqlconnection.Open()
+            sqlcommand.Connection = sqlconnection
+            If sqlcommand.ExecuteNonQuery > 0 Then
+
+                Return 1
+            Else
+
+                Return 0
+            End If
+
+        Catch ex As Exception
+
+            Return 0
+        Finally
+            sqlconnection.Close()
+        End Try
+
+
+    End Function
+    ''' <summary>
+    ''' 这是一个方便数据绑定之后更新和保存的对象
+    ''' 它继承了原先的bindingSource对象,所以有很多方法是继承过来的,不用重新实现
+    ''' </summary>
+    Class bind
+        Inherits BindingSource
+        Private Shared table As DataTable
+        Private Shared adapter As SqlDataAdapter
+        'Public Shared binding As BindingSource
+        ''' <summary>
+        ''' 用sqlcommand对象实例化bind对象
+        ''' </summary>
+        ''' <param name="sqlcommand"></param>
+        Sub New(sqlcommand As SqlCommand)
+            sqlcommand.Connection = sqlconnection
+            table = New DataTable
+            adapter = New SqlDataAdapter(sqlcommand)
+            adapter.Fill(table)
+            Me.DataSource = New BindingSource(table, "")
+            'binding = New BindingSource(table, "")
+        End Sub
+
+        Sub save()
+            Try
+                Me.EndEdit() '结束编辑
+                Dim cmd As New SqlCommandBuilder(adapter) '实例化commandbuilder对象
+                adapter.Update(table) '适配器 更新
+                MessageBox.Show("success")
+            Catch ex As Exception
+                MessageBox.Show(ex.Message)
+            End Try
+        End Sub
+    End Class
+End Class
